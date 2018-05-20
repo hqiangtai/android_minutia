@@ -1,0 +1,314 @@
+1、<include> 标签布局是这样设置的：layout="@layout/realtime_bus_layout"
+而 <viewstub>中标签布局是这样设置的：
+android:layout="@layout/realtime_bus_layout"
+2、Firebase App 需要在Application中irebaseApp.initializeApp(this);否则会出现java.lang.IllegalStateException: Default FirebaseApp is not initialized in this process com.hawk.android.browser. Make sure to call FirebaseApp.initializeApp(Context) first 。
+
+3、在Android 2.2中新的特性可以支持类似APP2SD卡上，我们的APK文件可以安装在SD卡上供用户使用，Android123今天就说下目前项目的升级和一些配置。
+
+   1. 首先让你的程序支持SD卡上安装必须具备设置API Level至少为8，即androidmanifest.xml的中android:minSdkVersion至少为8这样你的APK最终运行时兼容的固件只有2.2了，同时在androidmanifest.xml文件的根节点中必须加入android:installLocation这个属性，类似代码如下:
+  <manifest xmlns:android="http://schemas.android.com/apk/res/android" 
+    android:installLocation="preferExternal" 
+    ... >
+  2. android:installLocation的值主要有preferExternal、auto和internalOnly这三个选项，通常我们设置为preferExternal可以优先推荐应用安装到SD卡上，当然最终用户可以选择为内部的ROM存储上，如果外部存储已满，Android内部也会安装到内部存储上，auto将会根据存储空间自适应，当然还有一些应用可能会有特殊的目的，他们一般必须安装在内部存储才能可靠运行，设置为internalOnly比较合适，主要体现在：
+
+Services 服务
+Your running Service will be killed and will not be restarted when external storage is remounted. You can, however, register for the ACTION_EXTERNAL_APPLICATIONS_AVAILABLE broadcast Intent, which will notify your application when applications installed on external storage have become available to the system again. At which time, you can restart your Service. Android123提示大家一般实时后台监控类的应用都应该装到内部存储，比较可靠。
+
+Alarm Services  闹铃提醒服务
+Your alarms registered with AlarmManager will be cancelled. You must manually re-register any alarms when external storage is remounted.
+
+Input Method Engines 输入法引擎
+Your IME will be replaced by the default IME. When external storage is remounted, the user can open system settings to enable your IME again.
+
+Live Wallpapers 活动壁纸
+Your running Live Wallpaper will be replaced by the default Live Wallpaper. When external storage is remounted, the user can select your Live Wallpaper again.
+
+Live Folders 活动文件夹
+Your Live Folder will be removed from the home screen. When external storage is remounted, the user can add your Live Folder to the home screen again.
+
+App Widgets Widget
+Your App Widget will be removed from the home screen. When external storage is remounted, your App Widget will not be available for the user to select until the system resets the home application (usually not until a system reboot).
+
+Account Managers 账户管理
+Your accounts created with AccountManager will disappear until external storage is remounted.
+
+Sync Adapters 同步适配器
+Your AbstractThreadedSyncAdapter and all its sync functionality will not work until external storage is remounted.
+
+Device Administrators 设备管理器
+Your DeviceAdminReceiver and all its admin capabilities will be disabled, which can have unforeseeable consequences for the device functionality, which may persist after external storage is remounted.
+
+  那么哪些应用适合安装在SD卡中呢? Android开发网建议一些占用资源比较大的游戏，比如大于3MB的单个文件，不需要长期驻留内存的应用，不具备提醒和实时监控的应用一般放到SD卡上比较合适，不过目前想让你的应用装到SD卡上，必须设置API Level至少为8以上，同时显示注明android:installLocation。
+
+Android 8.0 Oreo 中，Google 移除掉了容易被滥用的“允许位置来源”应用的开关，在安装 Play Store 之外的第三方来源的 Android 应用的时候，竟然没有了“允许未知来源”的检查框，如果你还是想要安装某个被自己所信任的开发者的 app，则需要在每一次都手动授予“安装未知应用”的许可。清单文件添加安装未知来源应用的权限：  
+<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>  
+4、Rxjava 中BackpressureStrategy背压策略使用Flowable解决，使用Flowable代替Observable，对数据加工处理的各操作符都添加了背压支持，附加了额外的逻辑，其运行效率要比Observable低得多。BackpressureStrategy背压策略
+在Flowable的基础创建方法create中多了一个BackpressureStrategy类型的参数，
+BackpressureStrategy是个枚举，源码如下：
+public enum BackpressureStrategy {
+   ERROR,BUFFER,DROP,LATEST,MISSING
+}
+5、MediaCodec被引入于Android4.1，它能够访问系统底层的硬件编码器，我们可以通过指定MIME类型指定相应编码器，来实现对采集音、视频进行编解码；MediaMuxer是一个混合器，它能够将H.264视频流和ACC音频流混合封装成一个MP4文件，也可以只输入H.264视频流
+
+ 6、DiffUtil是support-v7:24.2.0中的新工具类，最大的用处就是在RecyclerView刷新时，不再无脑mAdapter.notifyDataSetChanged()。 
+以前无脑mAdapter.notifyDataSetChanged()有两个缺点：
+1不会触发RecyclerView的动画（删除、新增、位移、change动画）
+2性能较低，毕竟是无脑的刷新了一遍整个RecyclerView , 极端情况下：新老数据集一模一样，效率是最低的。
+
+使用DiffUtil后，改为如下代码：
+DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallBack(mDatas, newDatas), true);
+diffResult.dispatchUpdatesTo(mAdapter);
+它会自动计算新老数据集的差异，并根据差异情况，自动调用以下四个方法
+adapter.notifyItemRangeInserted(position, count);
+adapter.notifyItemRangeRemoved(position, count);
+adapter.notifyItemMoved(fromPosition, toPosition);
+adapter.notifyItemRangeChanged(position, count, payload);
+
+7、SIP开源项目FreeSwitch openSIP linphone；Freeswitch 高级主题之用kamailio负载均衡。
+
+8、WebP替代jpg或png
+9、视频音频编码以前是3个阵营：
+MP4（H.264 + HE-AAC）
+WebM（VP8 + Vorbis）
+Ogg（Theora + Vorbis）
+现在新一代是2家：
+MP4（H.265 + xHE-AAC）
+WebM（VP9 + Opus）
+新一代的技术进步很大，相同画质时，H.265比H.264小50%，VP9也比VP8小了50%，节约了空间和流量。H.265又称为HEVC，H.264又称为AVC。
+1.VP8目前是WebRTC的默认视频编解码器。超过90%的WebRTC视频会话使用VP8。
+2.VP9大约从Chrome 49官方宣布可用，但它还不是WebRTC的默认视频编解码器。
+10、Apk打包时要先清理Clean再打包，否则可能出现Resources$NotFoundException异常
+11、exoplayerExoPlayer是google开源的应用级媒体播放器项目，构建在Android的底层多媒体API之上。该开源项目包含ExoPlayer库和演示demo，github地址:https://github.com/google/ExoPlayer
+
+12、compile fileTree(dir: 'libs', include: ['*.jar'])
+但在3.0后的写法为
+implementation fileTree(dir: 'libs', include: ['*.jar'])或api fileTree(dir: 'libs', include: ['*.jar'])
+api 指令
+完全等同于compile指令，没区别，你将所有的compile改成api，完全没有错。
+
+implement指令
+这个指令的特点就是，对于使用了该命令编译的依赖，对该项目有依赖的项目将无法访问到使用该命令编译的依赖中的任何程序，也就是将该依赖隐藏在内部，而不对外部公开。
+
+13、埋点实现 http://unclechen.github.io/
+14、对于各种数据容器清理后要trimSize（）；
+15、RenderScriptGL，是Android 平台上的一种类C脚本语言。要在程序上实现RenderScript 渲染功能
+16、Activity我们直接调用requestPermissions(int, String[])即可，不过这个方法是在api leve 23以上，所以我们为了适配可以是使用兼容包提供的方法。对于support包的Fragment就可以直接调用requestPermissions(int, String[])，对于app包的Fragment就需要做版本判断了，这样就显得比较麻烦。
+17、Class类的newInstance方法创建对象。这个newInstance方法调用无参的构造函数创建对象。 java.lang.reflect.Constructor类里也有一个newInstance方法可以创建对象。我们可以通过这个newInstance方法调用有参数的和私有的构造函数。这两种newInstance方法就是大家所说的反射。事实上Class的newInstance方法内部调用Constructor的newInstance方法。
+Employee emp2 = (Employee) Class.forName("org.programming.mitra.exercises.Employee").newInstance();
+或者Employee emp2 = Employee.class.newInstance();
+
+Constructor<Employee> constructor = Employee.class.getConstructor();
+Employee emp3 = constructor.newInstance();
+
+两种调用方式给以比较说明： 
+Class.newInstance() 只能够调用无参的构造函数，即默认的构造函数； 
+Constructor.newInstance() 可以根据传入的参数，调用任意构造构造函数。 
+Class.newInstance() 抛出所有由被调用构造函数抛出的异常。 
+Class.newInstance() 要求被调用的构造函数是可见的，也即必须是public类型的; 
+Constructor.newInstance() 在特定的情况下，可以调用私有的构造函数。
+
+18、Android 解耦actvity：利用反射的方法
+ clazz = Class.forName(toActivityName);  
+            if(clazz != null){  
+                intent.setClass(from, clazz);  
+                from.startActivity(intent);  
+            }  
+19、几个常用的工具和类库
+AspectJ：和Java语言无缝衔接的面向切面的编程的扩展工具（可用于Android）。
+Javassist for Android：一个移植到Android平台的非常知名的操纵字节码的java库。
+DexMaker：用于在Dalvik VM编译时或运行时生成代码的基于java语言的一套API。
+ASMDEX：一个字节码操作库（ASM），但它处理Android可执行文件（DEX字节码）。
+20、设计模式遵循的原则有7个：
+    1、开闭原则（Open Close Principle）
+    　　对扩展开放，对修改关闭。
+    2、里氏代换原则（Liskov Substitution Principle）
+    　　只有当衍生类可以替换掉基类，软件单位的功能不受到影响时，基类才能真正被复用，而衍生类也能够在基类的基础上增加新的行为。
+    3、依赖倒转原则（Dependence Inversion Principle）
+    　　这个是开闭原则的基础，对接口编程，依赖于抽象而不依赖于具体。
+    4、接口隔离原则（Interface Segregation Principle）
+    　　使用多个隔离的借口来降低耦合度。
+    5、迪米特法则（最少知道原则）（Demeter Principle）
+    　　一个实体应当尽量少的与其他实体之间发生相互作用，使得系统功能模块相对独立。
+    6、合成复用原则（Composite Reuse Principle）
+    　　原则是尽量使用合成/聚合的方式，而不是使用继承。继承实际上破坏了类的封装性，超类的方法可能会被子类修改。
+    7、单一职责原则（Single Responsibility Principle）
+    定义：不要存在多于一个导致类变更的原因。通俗的说，即一个类只负责一项职责，应该仅有一个引起它变化的原因
+
+21、Surface对应了一块屏幕缓冲区，每个window对应一个Surface，任何View都要画在Surface的Canvas上（后面有原因解释）。传统的view共享一块屏幕缓冲区，所有的绘制必须在UI线程中进行。Surface中的Canvas成员，是专门用于供程序员画图的场所，就像黑板一样；其中的原始缓冲区是用来保存数据的地方；Surface本身的作用类似一个句柄，得到了这个句柄就可以得到其中的Canvas、原始缓冲区以及其它方面的内容。 Surface是用来管理数据的（句柄）。
+传统View及其派生类的更新只能在UI线程，然而UI线程还同时处理其他交互逻辑，这就无法保证View更新的速度和帧率了，而SurfaceView可以用独立的线程进行绘制，因此可以提供更高的帧率，例如游戏，摄像头取景等场景就比较适合SurfaceView来实现。
+
+22、SurfaceView是一个View也许不够严谨，然而从定义中pubilc classSurfaceView extends View{.....}显示SurfaceView确实是派生自View，但是SurfaceView却有自己的Surface。每个SurfaceView创建的时候都会创建一个MyWindow，new MyWindow(this)中的this正是SurfaceView自身，因此将SurfaceView和window绑定在一起，由第一部分我们知道，一个window对应一个Surface，因此SurfaceView也就内嵌了一个自己的Surface，可以认为SurfaceView是用来控制Surface中View的位置和尺寸的。View及其派生类的更新只能在UI线程，然而UI线程还同时处理其他交互逻辑，这就无法保证View更新的速度和帧率了，而SurfaceView可以用独立的线程进行绘制，因此可以提供更高的帧率，例如游戏，摄像头取景等场景就比较适合SurfaceView来实现。
+
+23、SurfaceHolder是一个接口，其作用就像一个关于Surface的监听器，提供访问和控制SurfaceView内嵌的Surface 相关的方法。它通过三个回调方法，让我们可以感知到Surface的创建、销毁或者改变。
+从设计模式的高度来看，Surface、SurfaceView和SurfaceHolder实质上就是广为人知的MVC，即Model-View-Controller。Model就是模型的意思，或者说是数据模型，或者更简单地说就是数据，也就是这里的Surface；View即视图，代表用户交互界面，也就是这里的SurfaceView；SurfaceHolder很明显可以理解为MVC中的Controller（控制器）。
+
+24、SurfaceHolder.Callback主要是当底层的Surface被创建、销毁或者改变时提供回调通知，由于绘制必须在Surface被创建后才能进行，因此SurfaceHolder.Callback中的surfaceCreated 和surfaceDestroyed 就成了绘图处理代码的边界。
+
+25、造成ANR呢？
+Service Timeout:服务在20s内未执行完成；（对于前台服务，则超时为SERVICE_TIMEOUT，即timeout=20s；对于后台服务，则超时为SERVICE_BACKGROUND_TIMEOUT，即timeout=200s；）
+BroadcastQueue Timeout：比如前台广播在10s内执行完成；
+ContentProvider Timeout：内容提供者执行超时20S；
+inputDispatching Timeout: 输入事件分发超时5s，包括按键分发事件的超时。
+在application中使用Future 和Callable可能会无限循环。
+
+26、严苛模式StrictMode在Activity的onCreate()函数中打开它，你也可以在Application派生类的OnCreate()函数中设置严苛模式。线程中运行的任何代码都可以设置严苛模式（StrictMode），但你的确只需要设置一次。严苛模式主要检测两大问题，一个是线程策略，即TreadPolicy，另一个是VM策略即VmPolicy。
+ThreadPolicy线程策略检测
+线程策略检测的内容有
+自定义的耗时调用 使用detectCustomSlowCalls()开启
+磁盘读取操作 使用detectDiskReads()开启
+磁盘写入操作 使用detectDiskWrites()开启
+网络操作 使用detectNetwork()开启
+VmPolicy虚拟机策略检测
+Activity泄露 使用detectActivityLeaks()开启
+未关闭的Closable对象泄露 使用detectLeakedClosableObjects()开启
+泄露的Sqlite对象 使用detectLeakedSqlLiteObjects()开启
+检测实例数量 使用setClassInstanceLimit()开启
+27、android:windowIsTranslucent=“true”会影响activity切换效果，如果activity的android:screenOrientation没有设置而是默认的话也会出现诡异的横竖屏切换。windowDisablePreview=“false”
+
+28、Wifi P2P 是在 Android 4.0 以及更高版本系统中加入的功能，通过 Wifi P2P 可以在不连接网络的情况下，直接与配对的设备进行数据交换。相对于蓝牙，Wifi P2P 的搜索速度和传输速度更快，传输距离更远。
+
+29、JAVA锁有哪些种类，以及区别
+在读很多并发文章中，会提及各种各样锁如公平锁，乐观锁等等，这篇文章介绍各种锁的分类。介绍的内容如下：
+
+公平锁/非公平锁
+可重入锁
+独享锁/共享锁
+互斥锁/读写锁
+乐观锁/悲观锁
+分段锁
+偏向锁/轻量级锁/重量级锁
+自旋锁
+上面是很多锁的名词，这些分类并不是全是指锁的状态，有的指锁的特性，有的指锁的设计，下面总结的内容是对每个锁的名词进行一定的解释。
+
+公平锁/非公平锁
+公平锁是指多个线程按照申请锁的顺序来获取锁。
+非公平锁是指多个线程获取锁的顺序并不是按照申请锁的顺序，有可能后申请的线程比先申请的线程优先获取锁。有可能，会造成优先级反转或者饥饿现象。
+对于Java ReentrantLock而言，通过构造函数指定该锁是否是公平锁，默认是非公平锁。非公平锁的优点在于吞吐量比公平锁大。
+对于Synchronized而言，也是一种非公平锁。由于其并不像ReentrantLock是通过AQS的来实现线程调度，所以并没有任何办法使其变成公平锁。
+
+可重入锁
+可重入锁又名递归锁，是指在同一个线程在外层方法获取锁的时候，在进入内层方法会自动获取锁。说的有点抽象，下面会有一个代码的示例。
+对于Java ReentrantLock而言, 他的名字就可以看出是一个可重入锁，其名字是Re entrant Lock重新进入锁。
+对于Synchronized而言,也是一个可重入锁。可重入锁的一个好处是可一定程度避免死锁。
+
+synchronized void setA() throws Exception{
+    Thread.sleep(1000);
+    setB();
+}
+
+synchronized void setB() throws Exception{
+    Thread.sleep(1000);
+}
+上面的代码就是一个可重入锁的一个特点，如果不是可重入锁的话，setB可能不会被当前线程执行，可能造成死锁。
+
+独享锁/共享锁
+独享锁是指该锁一次只能被一个线程所持有。
+共享锁是指该锁可被多个线程所持有。
+
+对于Java ReentrantLock而言，其是独享锁。但是对于Lock的另一个实现类ReadWriteLock，其读锁是共享锁，其写锁是独享锁。
+读锁的共享锁可保证并发读是非常高效的，读写，写读 ，写写的过程是互斥的。
+独享锁与共享锁也是通过AQS来实现的，通过实现不同的方法，来实现独享或者共享。
+对于Synchronized而言，当然是独享锁。
+
+互斥锁/读写锁
+上面讲的独享锁/共享锁就是一种广义的说法，互斥锁/读写锁就是具体的实现。
+互斥锁在Java中的具体实现就是ReentrantLock
+读写锁在Java中的具体实现就是ReadWriteLock
+
+乐观锁/悲观锁
+乐观锁与悲观锁不是指具体的什么类型的锁，而是指看待并发同步的角度。
+悲观锁认为对于同一个数据的并发操作，一定是会发生修改的，哪怕没有修改，也会认为修改。因此对于同一个数据的并发操作，悲观锁采取加锁的形式。悲观的认为，不加锁的并发操作一定会出问题。
+乐观锁则认为对于同一个数据的并发操作，是不会发生修改的。在更新数据的时候，会采用尝试更新，不断重新的方式更新数据。乐观的认为，不加锁的并发操作是没有事情的。
+
+从上面的描述我们可以看出，悲观锁适合写操作非常多的场景，乐观锁适合读操作非常多的场景，不加锁会带来大量的性能提升。
+悲观锁在Java中的使用，就是利用各种锁。
+乐观锁在Java中的使用，是无锁编程，常常采用的是CAS算法，典型的例子就是原子类，通过CAS自旋实现原子操作的更新。
+
+分段锁
+分段锁其实是一种锁的设计，并不是具体的一种锁，对于ConcurrentHashMap而言，其并发的实现就是通过分段锁的形式来实现高效的并发操作。
+我们以ConcurrentHashMap来说一下分段锁的含义以及设计思想，ConcurrentHashMap中的分段锁称为Segment，它即类似于HashMap（JDK7与JDK8中HashMap的实现）的结构，即内部拥有一个Entry数组，数组中的每个元素又是一个链表；同时又是一个ReentrantLock（Segment继承了ReentrantLock)。
+当需要put元素的时候，并不是对整个hashmap进行加锁，而是先通过hashcode来知道他要放在那一个分段中，然后对这个分段进行加锁，所以当多线程put的时候，只要不是放在一个分段中，就实现了真正的并行的插入。
+但是，在统计size的时候，可就是获取hashmap全局信息的时候，就需要获取所有的分段锁才能统计。
+分段锁的设计目的是细化锁的粒度，当操作不需要更新整个数组的时候，就仅仅针对数组中的一项进行加锁操作。
+
+偏向锁/轻量级锁/重量级锁
+这三种锁是指锁的状态，并且是针对Synchronized。在Java 5通过引入锁升级的机制来实现高效Synchronized。这三种锁的状态是通过对象监视器在对象头中的字段来表明的。
+偏向锁是指一段同步代码一直被一个线程所访问，那么该线程会自动获取锁。降低获取锁的代价。
+轻量级锁是指当锁是偏向锁的时候，被另一个线程所访问，偏向锁就会升级为轻量级锁，其他线程会通过自旋的形式尝试获取锁，不会阻塞，提高性能。
+重量级锁是指当锁为轻量级锁的时候，另一个线程虽然是自旋，但自旋不会一直持续下去，当自旋一定次数的时候，还没有获取到锁，就会进入阻塞，该锁膨胀为重量级锁。重量级锁会让其他申请的线程进入阻塞，性能降低。
+
+自旋锁
+在Java中，自旋锁是指尝试获取锁的线程不会立即阻塞，而是采用循环的方式去尝试获取锁，这样的好处是减少线程上下文切换的消耗，缺点是循环会消耗CPU。
+典型的自旋锁实现的例子，可以参考自旋锁的实现
+
+30、Java并发编程：CountDownLatch、CyclicBarrier和Semaphore
+1）CountDownLatch和CyclicBarrier都能够实现线程之间的等待，只不过它们侧重点不同：
+　　　　CountDownLatch一般用于某个线程A等待若干个其他线程执行完任务之后，它才执行；
+　　　　而CyclicBarrier一般用于一组线程互相等待至某个状态，然后这一组线程再同时执行；
+　　　　另外，CountDownLatch是不能够重用的，而CyclicBarrier是可以重用的。
+　　2）Semaphore其实和锁有点类似，它一般用于控制对某组资源的访问权限
+31、AQS====AbstractQueuedSynchronizer抽象的队列式的同步器，AQS定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch
+
+32、目前有能力开发如何内核的公司微软（Trident内核），FireFox（Gecke内核），苹果的Webkit，Google基于WebKit新分支（Blink）。
+
+33、Java 6中Arrays.sort()和Collections.sort()使用的是MergeSort，而在Java 7中，内部实现换成了TimSort，其对对象间比较的实现要求更加严格：Timsort是结合了合并排序（merge sort）和插入排序（insertion sort）而得出的排序算法，它在现实中有很好的效率
+Comparator的实现必须保证以下几点（出自这儿）：
+a). sgn(compare(x, y)) == -sgn(compare(y, x))
+b). (compare(x, y)>0) && (compare(y, z)>0) 意味着 compare(x, z)>0
+c). compare(x, y)==0 意味着对于任意的z：sgn(compare(x, z))==sgn(compare(y, z)) 均成立
+基本类型的排序都是使用了了DualPivotQuicksort的排序方法(我看的是jdk8，)。DualPivotQuicksort是快排的一种优化。象数组时，在原来的版本使用的合并排序（以后将会删除 ），现在使用的timSort。
+33、RecyclerView重叠效果
+其实就是每一项都搭一部分在它前面那项而已。我们知道，RecyclerView 可以通过设置 ItemDecoration 来实现列表的间隔效果，有没有想过要是把间隔设为负数会怎么样？比如：
+addItemDecoration(new ItemDecoration() {
+            @Override
+            public void getItemOffsets(Rect outRect, View view, RecyclerView parent, State state) {
+                super.getItemOffsets(outRect, view, parent, state);
+                outRect.bottom = -dp2px(context, 10);
+            }
+        });
+没错，这就实现了我们的重叠效果。
+
+34、RelativeLayout不如LinearLayout快的根本原因是RelativeLayout需要对其子View进行两次measure过程。而LinearLayout则只需一次measure过程，所以显然会快于RelativeLayout，但是如果LinearLayout中有weight属性，则也需要进行两次measure，但即便如此，应该仍然会比RelativeLayout的情况好一点
+35、JobScheduler的省电功能
+之所以说JobScheduler可以替代WakeLodk和Alarm运行任务，是因为后者在每个APP中是相互独立的，而JobScheduler运行在操作系统层面。举个例子，如果10个APP每半小时唤醒设备一次，由于这些任务的执行时机不可能同步，因此使用WakeLodk和Alarm一个小时内设备被唤醒了20次！但由于JobScheduler是操作系统层面的，因此系统会更有效地执行所有调度工作，每小时设备的唤醒次数会显著减少。
+可能有朋友会问了，那使用JobScheduler每小时设备被唤醒次数被降低到多少次呢？这个还真说不准，为什么说不准。是因为JobScheduler允许设定获取数据的时间间隔，比如把唤醒时间限制在8min后10min之前，这就给操作系统留出了一定的调整范围，使系统更好地协调设备唤醒任务，会达到一定的省电效果。2014年Google开发大会上指出，如果每个APP都使用这个API，那么可以节约15%到20%的电量。
+36、ImageView的属性app:srcCompat 在有些手机中不能显示图片
+37、调用了removeView方法，想要避免窗体泄露，但是这个方法并不管用，后来换成removeViewImmediate()就解决了这个问题，原因就是两个方法设计到线程同步问题，removeViewImmediate()是通知View立刻调用View.onDetachWindow()，这说明这个方法是通过一个监听或者观察者来实现的，因为线程的同步跟异步问题导致activity销毁了，但view还没有被remove完，于是就产生了所谓的窗体泄露。说到这里，我想大家也能明白这两个方法的区别。
+38、
+  1.	/** 
+  2.	     * 获取当前屏幕旋转角度 
+  3.	     *  
+  4.	     * @param activity 
+  5.	     * @return 0表示是竖屏; 90表示是左横屏; 180表示是反向竖屏; 270表示是右横屏 
+  6.	     */  
+  7.	    public static int getDisplayRotation(Activity activity) {  
+  8.	        if(activity == null)  
+  9.	            return 0;  
+  10.	          
+  11.	        int rotation = activity.getWindowManager().getDefaultDisplay()  
+  12.	                .getRotation();  
+  13.	        switch (rotation) {  
+  14.	        case Surface.ROTATION_0:  
+  15.	            return 0;  
+  16.	        case Surface.ROTATION_90:  
+  17.	            return 90;  
+  18.	        case Surface.ROTATION_180:  
+  19.	            return 180;  
+  20.	        case Surface.ROTATION_270:  
+  21.	            return 270;  
+  22.	        }  
+  23.	        return 0;  
+  24.	    }
+39、android 应用横竖屏切换时，横屏时的高度可能会传递到竖屏时的软键盘高度，导致获取的软键盘高度不准确，所以如UC的做法是，屏幕切换后会启动一个线程定时轮询检测高度。
+40、在activity的Layout中有一层ID android.R.id.content
+或Window.ID_ANDROID_CONTENT
+为farmeLayout用户绘制区域可动态加入全局控件。
+41、Jenkins打包时尽量使用Jar或aar依赖包，注意设置Gradle的缓存cache路径
+42、在android系统预装apk时 ，
+<application
+android:persistent="true"
+android:persistentWhenFeatureAvailable="com.android.systemui"两个属性会导致视频黑屏，操蛋的问题
+43、Bundle 打大小限制Parcel机制使用了一个共享内存，这个共享内存就叫Binder transaction buffer，这块内存有一个大小限制，目前是1MB，而且共用的，当超过了这个大小就会报错。
+也就是说不仅仅是一次性传递大数据会出问题，当同时传递很多数据，尽管每个都不超过1MB，但是总大小超过1MB也会出错
+44、save()：用来保存Canvas的状态,save()方法之后的代码，可以调用Canvas的平移、放缩、旋转、裁剪等操作！restore()：用来恢复Canvas之前保存的状态,防止save()方法代码之后对Canvas执行的操作，继续对后续的绘制会产生影响，通过该方法可以避免连带的影响！
+
