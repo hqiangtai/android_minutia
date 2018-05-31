@@ -311,4 +311,4 @@ android:persistentWhenFeatureAvailable="com.android.systemui"两个属性会导�
 43、Bundle 打大小限制Parcel机制使用了一个共享内存，这个共享内存就叫Binder transaction buffer，这块内存有一个大小限制，目前是1MB，而且共用的，当超过了这个大小就会报错。
 也就是说不仅仅是一次性传递大数据会出问题，当同时传递很多数据，尽管每个都不超过1MB，但是总大小超过1MB也会出错
 44、save()：用来保存Canvas的状态,save()方法之后的代码，可以调用Canvas的平移、放缩、旋转、裁剪等操作！restore()：用来恢复Canvas之前保存的状态,防止save()方法代码之后对Canvas执行的操作，继续对后续的绘制会产生影响，通过该方法可以避免连带的影响！
-
+45、Bitmap.createScaledBitmap函数在压缩生成的Bitmap和原图高宽一致情况下不会生成新的Bitmap对象，所以不能recycle()，要先判断一下新的Bitmap是否是引用原对象。
